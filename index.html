@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="stylesheet" href="style.css">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" >
+
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" ></script>
+
+
+        <!-- for each task this template will be used -->
+        <script type="text/template" id="tree-node-template">
+            <li id="task_{{ uuid }}">
+                <a data-task-uuid="{{ uuid }}" class="addcondition">+</a> 
+                <span class="ruleGroup" style="display: none"> {{ ruleGroup }}</span>
+                <ul>
+                  <li>
+                    <a data-task-uuid="{{ uuid }}" class="task-name" >{{ name }}</a>
+                    
+                    
+                    {{ children }}
+                    
+                  </li>
+                </ul>
+                
+              </li>
+        </script>
+
+
+        <!-- for each rule group this template will be used -->
+        <script type="text/template" id="rule-group-template">
+            <div class="rule-group p-4 mb-4 border rounded bg-white shadow-sm">
+                <!-- Rule Group Header -->
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="mb-0">Rule Group: <span class="fw-bold">{{ name }}</span> (ID: {{ uuid }})</h4>
+                </div>
+        
+                <!-- Rules (Placeholder for rule templates) -->
+                <div class="rules-list">
+                    {{ rules }}
+                </div>
+        
+                <!-- Add New Rule Button -->
+                <div class="text-end mt-3">
+                    <button class="btn btn-primary new-rule">
+                        <i class="bi bi-plus-circle"></i> Add New Rule
+                    </button>
+                </div>
+            </div>
+        </script>
+        
+
+        <!-- for each rule this template will be used -->
+        <script type="text/template" id="rule-template">
+            <div class="rule row align-items-center mb-3 p-3 border rounded bg-light">
+                <!-- Field -->
+                <div class="col-md-3">
+                    <label for="rule-field-{{ index }}" class="form-label">Field</label>
+                    <input type="text" class="form-control rule-field" 
+                        data-index="{{ index }}" data-name="field" id="rule-field-{{ index }}" 
+                        data-rule-id="{{ index }}" value="{{ field }}" placeholder="Enter field name">
+                </div>
+        
+                <!-- Operator -->
+                <div class="col-md-2">
+                    <label for="rule-operator-{{ index }}" class="form-label">Operator</label>
+                    <select class="form-select rule-operator" data-index="{{ index }}" data-name="logic_operator" id="rule-operator-{{ index }}" data-rule-id="{{ index }}">
+                        <option value="AND" {{ operatorAnd }}>AND</option>
+                        <option value="OR" {{ operatorOr }}>OR</option>
+                    </select>
+                </div>
+        
+                <!-- Condition -->
+                <div class="col-md-3">
+                    <label for="rule-condition-{{ index }}" class="form-label">Condition</label>
+                    <select class="form-select rule-condition" data-index="{{ index }}" data-name="condition_type" id="rule-condition-{{ index }}" data-rule-id="{{ index }}">
+                        <option value="less_than" {{ conditionLess }}>Less than</option>
+                        <option value="greater_than" {{ conditionGreater }}>Greater than</option>
+                        <option value="equal_to" {{ conditionEqual }}>Equal to</option>
+                    </select>
+                </div>
+        
+                <!-- Value -->
+                <div class="col-md-3">
+                    <label for="rule-value-{{ index }}" class="form-label">Value</label>
+                    <input type="text" class="form-control rule-value" data-index="{{ index }}" data-name="condition_value" id="rule-value-{{ index }}" data-rule-id="{{ index }}" value="{{ value }}" placeholder="Enter value">
+                </div>
+            </div>
+        </script>
+        
+
+
+
+        <script type="text/javascript">
+
+            // for reactivity 
+            let state = {
+                reactiveFilelds : ['workflow','selected_task_id' , 'rule_group_details'],
+                watchers : {},
+                attachWatchers : function(field, func) {
+                    
+                if(!field && !func && !this.watchers 
+                    && this.reactiveFilelds.indexOf(field) === -1) return;
+                this.watchers[field] = func;
+                }
+            }
+
+           
+                    
+            let reactiveState = new Proxy(state, {
+                set: function(obj, prop, value) {
+                    
+                    if(obj.watchers[prop]) {
+                        obj.watchers[prop](obj[prop], value);
+                    }
+                    obj[prop] = value;
+                    return true;
+                }
+            });
+
+            window.reactiveState = reactiveState;
+
+            let workflow = {
+                "name": "Workflow 1",
+                "description": "This is workflow 1",
+                "step_arr": [
+        {
+            "name": "Step 1",
+            "description": "Description of Step 1",
+            "task_arr": {
+                "uuid": "task-1",
+                "name": "1",
+                "status": "pending",
+                "branch_arr": {
+                    "rule_grp_1": {
+                        "uuid": "rule_grp_1",
+                        "name": "Rule Group 1",
+                        "rule_group_rule_arr": [
+                            {
+                                "field": "field_2",
+                                "logic_operator": "AND",
+                                "condition_type": "greater_than",
+                                "condition_value": "5"
+                            },
+                            {
+                                "field": "field_1",
+                                "logic_operator": "AND",
+                                "condition_type": "less_than",
+                                "condition_value": "5"
+                            }
+                        ],
+                        "task_arr": {
+                            "uuid": "task-2",
+                            "name": "2",
+                            "status": "processing",
+                            "branch_arr": {
+                                "rule_grp_2": {
+                                    "uuid": "rule_grp_2",
+                                    "name": "Rule Group 2",
+                                    "rule_group_rule_arr": [
+                                        {
+                                            "field": "field_2",
+                                            "logic_operator": "AND",
+                                            "condition_type": "greater_than",
+                                            "condition_value": "10"
+                                        },
+                                        {
+                                            "field": "field_1",
+                                            "logic_operator": "AND",
+                                            "condition_type": "less_than",
+                                            "condition_value": "10"
+                                        }
+                                    ],
+                                    "task_arr": {
+                                        "uuid": "task-3",
+                                        "name": "3",
+                                        "status": "pending",
+                                        "branch_arr": {
+                                            "rule_grp_3": {
+                                                "uuid": "rule_grp_3",
+                                                "name": "Rule Group 3",
+                                                "rule_group_rule_arr": [
+                                                    {
+                                                        "field": "field_2",
+                                                        "logic_operator": "AND",
+                                                        "condition_type": "greater_than",
+                                                        "condition_value": "15"
+                                                    },
+                                                    {
+                                                        "field": "field_1",
+                                                        "logic_operator": "AND",
+                                                        "condition_type": "less_than",
+                                                        "condition_value": "15"
+                                                    }
+                                                ],
+                                                "task_arr": {
+                                                    "uuid": "task-4",
+                                                    "name": "4",
+                                                    "status": "pending",
+                                                    "branch_arr": []
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "rule_grp_4": {
+                        "uuid": "rule_grp_4",
+                        "name": "Rule Group 4",
+                        "rule_group_rule_arr": [
+                            {
+                                "field": "field_2",
+                                "logic_operator": "AND",
+                                "condition_type": "greater_than",
+                                "condition_value": "20"
+                            },
+                            {
+                                "field": "field_1",
+                                "logic_operator": "AND",
+                                "condition_type": "less_than",
+                                "condition_value": "20"
+                            }
+                        ],
+                        "task_arr": {
+                            "uuid": "task-7",
+                            "name": "7",
+                            "status": "pending",
+                            "branch_arr": {
+                                "rule_grp_3": {
+                                    "uuid": "rule_grp_3",
+                                    "name": "Rule Group 3",
+                                    "rule_group_rule_arr": [
+                                        {
+                                            "field": "field_2",
+                                            "logic_operator": "AND",
+                                            "condition_type": "greater_than",
+                                            "condition_value": "15"
+                                        },
+                                        {
+                                            "field": "field_1",
+                                            "logic_operator": "AND",
+                                            "condition_type": "less_than",
+                                            "condition_value": "15"
+                                        }
+                                    ],
+                                    "task_arr": {
+                                        "uuid": "task-8",
+                                        "name": "8",
+                                        "status": "pending",
+                                        "branch_arr": []
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    ]
+            };
+
+
+            function renderTree(task , ruleGroup) {
+                if (!task) return '';
+
+                ruleGroup = ruleGroup ?? {};
+
+                let template = $('#tree-node-template').html(); // Node template 
+
+
+                let taskHtml = template.replace(/{{ name }}/g, task.name)
+                       .replace(/{{ uuid }}/g, task.uuid)
+                       .replace(/{{ ruleGroup }}/g, JSON.stringify(ruleGroup));
+                
+                let branches = '';
+                if (task.branch_arr) {
+
+                    for(let i in task.branch_arr) {
+                        branches += renderTree(task.branch_arr[i].task_arr, task.branch_arr[i].rule_group_rule_arr);
+                    }
+                    
+                }
+                
+                return taskHtml.replace('{{ children }}',branches ? '<ul>' + branches + '</ul>' : '');
+            }
+
+            function renderRuleGroup(ruleGroup) {
+                if (!ruleGroup || ruleGroup.length === 0) return '<p>No Rule Groups available.</p>';
+
+                var ruleGroupHtml = '';
+
+                for (var i = 0; i < ruleGroup.length; i++) {
+                    var group = ruleGroup[i];
+                    
+                    // Render the rule group using the template
+                    var groupTemplate = $('#rule-group-template').html();
+                    var rulesHtml = '';
+
+                    for (var j = 0; j < group.length; j++) {
+                        var rule = group[j];
+
+                        // Render each rule using the template
+                        var ruleTemplate = $('#rule-template').html();
+                        var operatorAnd = (rule.logic_operator === 'AND') ? 'selected' : '';
+                        var operatorOr = (rule.logic_operator === 'OR') ? 'selected' : '';
+                        var conditionLess = (rule.condition_type === 'less_than') ? 'selected' : '';
+                        var conditionGreater = (rule.condition_type === 'greater_than') ? 'selected' : '';
+                        var conditionEqual = (rule.condition_type === 'equal_to') ? 'selected' : '';
+
+                        rulesHtml += ruleTemplate
+                            .replace(/{{ index }}/g, j)
+                            .replace(/{{ field }}/g, rule.field)
+                            .replace(/{{ operatorAnd }}/g, operatorAnd)
+                            .replace(/{{ operatorOr }}/g, operatorOr)
+                            .replace(/{{ conditionLess }}/g, conditionLess)
+                            .replace(/{{ conditionGreater }}/g, conditionGreater)
+                            .replace(/{{ conditionEqual }}/g, conditionEqual)
+                            .replace(/{{ value }}/g, rule.condition_value);
+                    }
+
+                    ruleGroupHtml += groupTemplate
+                        .replace(/{{ name }}/g, group.name)
+                        .replace(/{{ uuid }}/g, group.uuid)
+                        .replace(/{{ rules }}/g, rulesHtml);
+                }
+                return ruleGroupHtml;
+            }
+
+
+            
+            reactiveState.attachWatchers('workflow', function(oldValue, newValue) {
+                const treeHtml = '<ul>'+renderTree(newValue.step_arr[0].task_arr)+'</ul>';
+                $('#tree_container').html(treeHtml);
+            })
+
+            reactiveState.attachWatchers('selected_task_id', function(oldValue, newValue) {
+                console.log("Task selected: " + newValue);
+            })
+
+            reactiveState.attachWatchers('rule_group_details', function(oldValue, newValue) {
+                $('#rule_group_details').html(renderRuleGroup([newValue]) );
+            })
+
+
+
+           
+
+            window.addEventListener('load', function() {
+                reactiveState.workflow = workflow;
+                reactiveState.selected_task_id = false;
+
+              
+                $('#tree_container').on('click',function(event){
+                    if($(event.target).hasClass('addcondition')){
+                        let rule_json = $(event.target).parent().find('.ruleGroup').html();
+                        let task_uuid = $(event.target).data('task-uuid');
+                        $('#tree_container .highlighted').removeClass('highlighted');
+                        $(event.target).addClass('highlighted');
+                        reactiveState.rule_group_details = JSON.parse(rule_json);
+                        reactiveState.selected_task_id = task_uuid;
+                    }
+
+                    if($(event.target).hasClass('.task-name')){
+                        let task_uuid = $(this).data('task-uuid');
+                        reactiveState.selected_task_id = task_uuid;
+                    }
+                });
+
+                $('#rule_group_details').on('click',function(event){
+                    
+                    if($(event.target).hasClass('new-rule')){
+                       
+                        reactiveState.rule_group_details.push( {
+                            "field": "",
+                            "logic_operator": "AND",
+                            "condition_type": "greater_than",
+                            "condition_value": ""
+                        });
+
+                        reactiveState.rule_group_details = JSON.parse(JSON.stringify(reactiveState.rule_group_details));
+                    }
+                });
+
+                $('#rule_group_details').on('change',function(event){
+                    const ind = $(event.target).data('index');
+                    const name = $(event.target).data('name');
+                    reactiveState.rule_group_details[ind][name] = $(event.target).val();
+                });
+
+
+
+               
+            });
+        </script>
+    </head>
+
+    <body>
+        <div class="tree" id="tree_container"></div>
+
+        <!-- TODO -->
+        <div class="tasks-list">
+            <h2>List Of Tasks</h2>
+            <ul>
+                <li> 
+                    Task 1
+                </li>
+                <li> 
+                    Task 2
+                </li>
+                <li> 
+                    Task 3
+                </li>
+            </ul>
+        </div>
+        <br/>   
+        <!-- TODO -->
+
+        <div id="rule_group_details" class="ruleGroupDetails">
+            <!-- Rule group details and rules will be displayed here -->
+        </div>
+
+    </body>
+</html>
+
